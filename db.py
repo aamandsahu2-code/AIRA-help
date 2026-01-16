@@ -121,5 +121,36 @@ async def get_all_users():
         if "user_id" in document:
             users.append(document["user_id"])
     return users
+# db.py mein end mein add karein
 
+# ==========================================================
+# RULES SYSTEM
+# ==========================================================
+async def set_rules(chat_id: int, rules: str):
+    await db.rules.update_one(
+        {"chat_id": chat_id},
+        {"$set": {"rules": rules}},
+        upsert=True
+    )
+
+async def get_rules(chat_id: int):
+    data = await db.rules.find_one({"chat_id": chat_id})
+    return data.get("rules") if data else None
+
+# ==========================================================
+# FILTERS SYSTEM
+# ==========================================================
+async def add_filter(chat_id: int, keyword: str, reply: str):
+    await db.filters.update_one(
+        {"chat_id": chat_id, "keyword": keyword.lower()},
+        {"$set": {"reply": reply}},
+        upsert=True
+    )
+
+async def get_filters(chat_id: int):
+    cursor = db.filters.find({"chat_id": chat_id})
+    return {doc["keyword"]: doc["reply"] async for doc in cursor}
+
+async def stop_filter(chat_id: int, keyword: str):
+    await db.filters.delete_one({"chat_id": chat_id, "keyword": keyword.lower()})
 
