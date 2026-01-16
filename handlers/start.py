@@ -21,7 +21,7 @@ def register_handlers(app: Client):
         text = f"""
 ✨ Hello {user}! ✨
 
-👋 I am **Nomad** 🤖, your advanced Group Manager Bot.
+👋 I am **AIRA** 🤖, your advanced Group Manager Bot.
 
 **Highlights:**
 ─────────────────────────────
@@ -39,7 +39,7 @@ def register_handlers(app: Client):
             ],
             [
                 InlineKeyboardButton("※ Owner", url=f"tg://user?id={OWNER_ID}"),
-                InlineKeyboardButton("Repo", url="https://github.com/LearningBotsOfficial/Nomade"),
+                InlineKeyboardButton("Repo", url="https://github.com/LearningBotsOfficial/AIRAe"),
             ],
             [InlineKeyboardButton("📚 Help Commands 📚", callback_data="help")]
         ])
