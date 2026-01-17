@@ -6,7 +6,7 @@ import db
 
 def register_handlers(app: Client):
 
-    # --- Utility: Safe Edit ---
+    # --- Utility: Safe Edit (Fixes 400 Errors) ---
     async def safe_edit(message, text, buttons):
         try:
             media = InputMediaPhoto(media=START_IMAGE, caption=text)
@@ -14,7 +14,7 @@ def register_handlers(app: Client):
         except (MessageNotModified, MessageIdInvalid):
             pass # Error ignore karein taaki logs saaf rahein
 
-    # --- Start Menu ---
+    # --- Start Menu Logic ---
     async def send_start_menu(message, user_name, is_callback=False):
         text = f"✨ **Hi {user_name}! Main hoon AIRA** 🎀\n\nAapka swagat hai! Kya aap mujhe apne group mein add karenge? 🙈"
         buttons = InlineKeyboardMarkup([
@@ -28,6 +28,7 @@ def register_handlers(app: Client):
         else:
             await message.reply_photo(START_IMAGE, caption=text, reply_markup=buttons)
 
+    # --- Handlers ---
     @app.on_message(filters.private & filters.command("start"))
     async def start_command(client, message):
         user = message.from_user
