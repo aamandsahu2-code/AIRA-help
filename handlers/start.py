@@ -1,64 +1,123 @@
+# ============================================================
+# AIRA Personality Version - Updated by KD's AI Partner 🌸
+# Fixes: MessageNotModified Error & Callback Handlers
+# ============================================================
+
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
+from pyrogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    InputMediaPhoto
+)
+from pyrogram.errors import MessageNotModified
 from config import BOT_USERNAME, SUPPORT_GROUP, UPDATE_CHANNEL, START_IMAGE, OWNER_ID
 import db
+import random
 
 def register_handlers(app: Client):
 
-    # --- Start Menu Function ---
+    # --- Utility: Safe Edit Media (Fixes 400 Error) ---
+    async def safe_edit_menu(callback_query, text, buttons):
+        try:
+            media = InputMediaPhoto(media=START_IMAGE, caption=text)
+            await callback_query.message.edit_media(media=media, reply_markup=buttons)
+        except MessageNotModified:
+            await callback_query.answer("Aap pehle se isi menu mein hain! ✨", show_alert=False)
+        except Exception as e:
+            print(f"Error: {e}")
+
+    # --- Main Start Menu Logic ---
     async def send_start_menu(message, user_name):
-        text = f"✨ **Hi {user_name}! Main hoon AIRA** 🎀\n\nAapka swagat hai! Main ek smart group manager hoon. Kya aap mujhe apne group mein add karenge? 🙈"
+        text = f"""
+✨ **Hi {user_name}! Main hoon AIRA** 🎀
+
+Aapka swagat hai! Main ek smart aur friendly group manager hoon. 
+Mujhe dosti karna aur groups ko safe rakhna pasand hai! 🌸
+
+**Main aapki help kaise kar sakti hoon?**
+─────────────────────────────
+• 🛡️ **Anti-Spam**: Links ko main turant hata deti hoon!
+• 🔒 **Lock System**: Group elements ko lock karein.
+• 📋 **Rules**: Aapke group ke usool, meri zimmedari.
+• 💤 **AFK Mode**: Jab aap busy hon, main sab sambhaal lungi.
+
+Kya aap mujhe apne group mein add karenge? 🙈
+"""
         buttons = InlineKeyboardMarkup([
             [InlineKeyboardButton("🎀 Add AIRA to Group 🎀", url=f"https://t.me/{BOT_USERNAME}?startgroup=true")],
-            [InlineKeyboardButton("🌸 Support", url=SUPPORT_GROUP), InlineKeyboardButton("📢 Updates", url=UPDATE_CHANNEL)],
-            [InlineKeyboardButton("※ Owner", url=f"tg://user?id={OWNER_ID}"), InlineKeyboardButton("📚 Help Menu", callback_data="help")]
+            [
+                InlineKeyboardButton("🌸 Support", url=SUPPORT_GROUP),
+                InlineKeyboardButton("📢 Updates", url=UPDATE_CHANNEL),
+            ],
+            [
+                InlineKeyboardButton("※ Owner", url=f"tg://user?id={OWNER_ID}"),
+                InlineKeyboardButton("📚 Help Menu", callback_data="help_menu"),
+            ]
         ])
-        
-        if message.reply_to_message or hasattr(message, 'photo'): # Edit check
-            await message.edit_media(media=InputMediaPhoto(media=START_IMAGE, caption=text), reply_markup=buttons)
-        else:
+
+        if hasattr(message, 'reply_photo'): # If it's a new command
             await message.reply_photo(START_IMAGE, caption=text, reply_markup=buttons)
+        else: # If it's a callback (Back button)
+            media = InputMediaPhoto(media=START_IMAGE, caption=text)
+            await message.edit_media(media=media, reply_markup=buttons)
 
     # --- Start Command ---
     @app.on_message(filters.private & filters.command("start"))
-    async def start_cmd(client, message):
+    async def start_command(client, message):
         user = message.from_user
         await db.add_user(user.id, user.first_name)
         await send_start_menu(message, user.first_name)
 
-    # --- Main Help Menu ---
-    @app.on_callback_query(filters.regex("help"))
-    async def help_menu(client, callback_query):
-        text = "🌸 **AIRA Help Menu** 🌸\n\nKiski help chahiye aapko?"
+    # --- Help Categories Menu ---
+    @app.on_callback_query(filters.regex("help_menu"))
+    async def help_callback(client, callback_query):
+        text = "🌸 **Help Menu** 🌸\n\nChoose a category to explore my powers:"
         buttons = InlineKeyboardMarkup([
-            [InlineKeyboardButton("⚙️ Moderation", callback_data="mod_help"), InlineKeyboardButton("🔒 Locks", callback_data="lock_help")],
-            [InlineKeyboardButton("📋 Rules/Filters", callback_data="rules_help"), InlineKeyboardButton("💤 AFK System", callback_data="afk_help")],
+            [
+                InlineKeyboardButton("⚙️ Moderation", callback_data="mod_h"),
+                InlineKeyboardButton("🔒 Locks", callback_data="lock_h"),
+            ],
+            [
+                InlineKeyboardButton("📋 Rules/Filters", callback_data="rules_h"),
+                InlineKeyboardButton("👋 Greetings", callback_data="greet_h"),
+            ],
+            [
+                InlineKeyboardButton("💤 AFK System", callback_data="afk_h"),
+                InlineKeyboardButton("👤 Owner", callback_data="owner_h")
+            ],
             [InlineKeyboardButton("🔙 Back to Home", callback_data="back_home")]
         ])
-        await callback_query.message.edit_media(media=InputMediaPhoto(media=START_IMAGE, caption=text), reply_markup=buttons)
+        await safe_edit_menu(callback_query, text, buttons)
 
     # --- Back to Home Handler ---
     @app.on_callback_query(filters.regex("back_home"))
-    async def back_home(client, callback_query):
+    async def back_home_callback(client, callback_query):
         await send_start_menu(callback_query.message, callback_query.from_user.first_name)
+        await callback_query.answer()
 
-    # --- AFK & Rules Handlers (Sample) ---
-    @app.on_callback_query(filters.regex("afk_help"))
-    async def afk_h(client, callback_query):
-        await callback_query.message.edit_caption("💤 **AFK System**\n\nUse `/afk [reason]` jab aap busy hon. Main sabko bata dungi!", 
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="help")]]))
+    # --- Individual Help Handlers (Example: AFK) ---
+    @app.on_callback_query(filters.regex("afk_h"))
+    async def afk_help_callback(client, callback_query):
+        text = "**💤 AFK System**\n\nJab aap busy hon, toh `/afk [reason]` likhein. Main sabko bata dungi! ✨"
+        buttons = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="help_menu")]])
+        await safe_edit_menu(callback_query, text, buttons)
+
+    # --- Owner Help Handler ---
+    @app.on_callback_query(filters.regex("owner_h"))
+    async def owner_help_callback(client, callback_query):
+        text = "**👤 Owner Commands**\n\nSirf mere Owner ke liye:\n- `/broadcast`: Sabko msg bhejein.\n- `/stats`: Meri growth check karein. 📈"
+        buttons = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="help_menu")]])
+        await safe_edit_menu(callback_query, text, buttons)
 
     # ==========================================
-    # 🕵️‍♂️ KD SPECIAL: ANTI-SPY / INTROVERT FILTER
+    # 🕵️‍♂️ KD SPECIAL: INTROVERT PROTECTION
     # ==========================================
-    @app.on_message(filters.text & ~filters.me)
-    async def introvert_filter(client, message):
-        msg_text = message.text.lower()
-        if "spy" in msg_text or "kaun ho" in msg_text:
+    @app.on_message(filters.private & filters.text & ~filters.command(["start", "help", "id"]))
+    async def handle_strangers(client, message):
+        if message.from_user.id != int(OWNER_ID):
             responses = [
-                "Main koi spy nahi hoon, main toh KD ki pyaari AIRA hoon! 🎀",
-                "Hehe, mysterious lag rahi hoon kya? Main toh bas help karne aayi hoon! ✨",
-                "Secret agent toh nahi hoon, par aapke group ka dhyan zaroor rakh sakti hoon! 😉"
+                "Hehe, main sirf KD ki baatein sunti hoon! 🎀",
+                "Aap mujhse dosti karna chahte hain? Pehle mere owner se puchiye! 😉",
+                "Main thodi busy hoon rules banane mein, baad mein baat karein? ✨"
             ]
-            import random
             await message.reply_text(random.choice(responses))
